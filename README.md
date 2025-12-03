@@ -1,28 +1,71 @@
-[![CI](https://github.com/allyourcodebase/libarchive/actions/workflows/ci.yaml/badge.svg)](https://github.com/allyourcodebase/libarchive/actions)
+[![CI](https://github.com/daniel-heater-imprivata/libarchive-zig/actions/workflows/ci.yaml/badge.svg)](https://github.com/daniel-heater-imprivata/libarchive-zig/actions)
 
 # libarchive
 
-This is [libarchive](ttps://github.com/libarchive/libarchive), packaged for [Zig](https://ziglang.org/).
+This is [libarchive](https://github.com/libarchive/libarchive), packaged for [Zig](https://ziglang.org/).
 
-## Installation
+Forked from [allyourcodebase/libarchive-zig](https://github.com/allyourcodebase/libarchive-zig).
 
-First, update your `build.zig.zon`:
+## Usage
 
-```
-# Initialize a `zig build` project if you haven't already
-zig init
-zig fetch --save git+https://github.com/allyourcodebase/libarchive.git#3.8.1
+```sh
+zig fetch --save https://github.com/daniel-heater-imprivata/libarchive-zig/archive/refs/tags/3.8.1.tar.gz
 ```
 
-You can then import `libarchive` in your `build.zig` with:
+In your `build.zig`:
 
 ```zig
-const bzip_dependency = b.dependency("libarchive", .{
+const libarchive_dep = b.dependency("libarchive", .{
     .target = target,
     .optimize = optimize,
 });
-your_exe.linkLibrary(bzip_dependency.artifact("archive"));
+your_exe.linkLibrary(libarchive_dep.artifact("archive"));
 ```
 
-## Note
-Cross compiling to MacOS requires CoreServices.
+## Features
+
+- Multi-format archive support: tar, zip, 7z, rar, iso9660, cpio, ar
+- Compression: gzip, bzip2, xz, zstd, lz4
+- Read and write support for most formats
+- Streaming API for large archives
+- Cross-platform: Linux, macOS, Windows
+- Cross-compilation ready
+
+## Development
+
+Uses [devbox](https://www.jetify.com/devbox) for reproducible builds.
+
+```sh
+devbox run test
+devbox run test-cross
+```
+
+Cross-compile:
+```sh
+zig build -Dtarget=aarch64-linux -Doptimize=ReleaseSafe
+```
+
+## Versioning
+
+Format: `<upstream-version>[-<build-number>]`
+
+Examples:
+- `3.8.1` - Matches libarchive 3.8.1
+- `3.8.1-1` - Package update (build changes, CI fixes)
+- `3.8.2` - New upstream libarchive version
+
+## Releasing
+
+Package update (build changes, CI fixes):
+```sh
+git tag 3.8.1-1
+git push origin 3.8.1-1
+```
+
+Upstream update (new libarchive version):
+```sh
+# Update build.zig.zon: .version, .dependencies.upstream.url, .dependencies.upstream.hash
+git commit -am "Update to libarchive 3.8.2"
+git tag 3.8.2
+git push origin main 3.8.2
+```

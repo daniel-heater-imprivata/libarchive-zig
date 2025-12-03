@@ -1,12 +1,11 @@
 const std = @import("std");
 
-// TODO: somehow grab this from build.zig.zon
 const version: std.SemanticVersion = .{
     .major = 3,
     .minor = 8,
     .patch = 1,
 };
-const version_string = std.fmt.comptimePrint("{}", .{version});
+const version_string = std.fmt.comptimePrint("{any}", .{version});
 
 pub fn build(b: *std.Build) void {
     const upstream = b.dependency("upstream", .{});
@@ -18,17 +17,26 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
     });
 
-    const lib_mod = b.createModule(.{
-        .target = target,
-        .optimize = optimize,
-    });
-    lib_mod.linkLibrary(zlib.artifact("z"));
-    lib_mod.addCMacro("HAVE_CONFIG_H", "1");
-
-    const lib = b.addStaticLibrary(.{
+    const lib = b.addLibrary(.{
         .name = "archive",
-        .root_module = lib_mod,
+        .linkage = .static,
+        .root_module = b.createModule(.{
+            .target = target,
+            .optimize = optimize,
+        }),
     });
+
+    lib.root_module.linkLibrary(zlib.artifact("z"));
+    lib.root_module.addCMacro("HAVE_CONFIG_H", "1");
+
+    // Set macOS version to 10.5.9 to disable CommonCrypto/xattr for cross-compilation
+    // libarchive checks MAC_OS_X_VERSION_MAX_ALLOWED in 3 places:
+    //   archive_hmac_private.h:45 (>= 1060), archive_cryptor_private.h:45 (>= 1080), archive_cryptor.c:160 (< 1090)
+    // Version 1059 triggers portable fallback implementations
+    if (target.result.os.tag == .macos) {
+        lib.root_module.addCMacro("MAC_OS_X_VERSION_MAX_ALLOWED", "1059");
+        lib.root_module.addCMacro("MAC_OS_X_VERSION_MIN_REQUIRED", "1059");
+    }
 
     const is_linux = target.result.os.tag == .linux;
     const is_windows = target.result.os.tag == .windows;
@@ -51,7 +59,7 @@ pub fn build(b: *std.Build) void {
         .BSDCPIO_VERSION_STRING = version_string,
         .BSDTAR_VERSION_STRING = version_string,
         .BSDUNZIP_VERSION_STRING = version_string,
-        .HAVE_ATTR_XATTR_H = true,
+        .HAVE_ATTR_XATTR_H = false,
         .HAVE_BCRYPT_H = is_windows,
         .HAVE_BLAKE2_H = null,
         .HAVE_BZLIB_H = null,
@@ -330,7 +338,7 @@ pub fn build(b: *std.Build) void {
         .HAVE_SYS_UTSNAME_H = !is_windows,
         .HAVE_SYS_VFS_H = true,
         .HAVE_SYS_WAIT_H = !is_windows,
-        .HAVE_SYS_XATTR_H = true,
+        .HAVE_SYS_XATTR_H = false,
         .HAVE_TIMEGM = !is_windows,
         .HAVE_TIME_H = true,
         .HAVE_TZSET = true,
@@ -380,7 +388,7 @@ pub fn build(b: *std.Build) void {
         .PACKAGE = "libarchive",
         .PACKAGE_BUGREPORT = "libarchive--discuss@googlegroups.com",
         .PACKAGE_NAME = "libarchive",
-        .PACKAGE_STRING = b.fmt("libarchive {}", .{version}),
+        .PACKAGE_STRING = b.fmt("libarchive {any}", .{version}),
         .PACKAGE_TARNAME = "libarchive",
         .PACKAGE_URL = "",
         .PACKAGE_VERSION = version_string,
@@ -575,10 +583,6 @@ pub fn build(b: *std.Build) void {
                 "archive_read_disk_posix.c",
             },
         });
-    }
-
-    if (target.result.os.tag == .macos) {
-        lib.linkFramework("CoreServices");
     }
 
     lib.root_module.addConfigHeader(config);

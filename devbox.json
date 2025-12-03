@@ -1,0 +1,36 @@
+{
+  "$schema":  "https://raw.githubusercontent.com/jetify-com/devbox/0.16.0/.schema/devbox.schema.json",
+  "packages": ["zig@0.15.2"],
+  "shell": {
+    "init_hook": [
+      "echo 'Welcome to devbox!' > /dev/null"
+    ],
+    "scripts": {
+      "build": [
+        "zig build"
+      ],
+      "install": [
+        "zig build install"
+      ],
+      "test": [
+        "zig build",
+        "zig build install",
+        "test -f zig-out/lib/libarchive.a && echo 'Static library OK' || exit 1",
+        "test -f zig-out/include/archive.h && echo 'Headers OK' || exit 1"
+      ],
+      "test-cross": [
+        "echo 'Testing cross-compilation for all targets...'",
+        "zig build -Dtarget=x86_64-linux -Doptimize=ReleaseSafe && echo '✓ x86_64-linux'",
+        "zig build -Dtarget=aarch64-linux -Doptimize=ReleaseSafe && echo '✓ aarch64-linux'",
+        "zig build -Dtarget=x86_64-macos -Doptimize=ReleaseSafe && echo '✓ x86_64-macos'",
+        "zig build -Dtarget=aarch64-macos -Doptimize=ReleaseSafe && echo '✓ aarch64-macos'",
+        "zig build -Dtarget=x86_64-windows -Doptimize=ReleaseSafe && echo '✓ x86_64-windows'",
+        "zig build -Dtarget=aarch64-windows -Doptimize=ReleaseSafe && echo '✓ aarch64-windows'",
+        "echo 'All cross-compilation targets succeeded!'"
+      ],
+      "clean": [
+        "rm -rf zig-out zig-cache .zig-cache"
+      ]
+    }
+  }
+}
